@@ -1,6 +1,7 @@
 package com.service;
 
 import com.model.MarketPrice;
+import com.model.YahooMarketPriceResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -8,19 +9,29 @@ import reactor.core.publisher.Mono;
 @Service
 public class YahooFinanceService {
 
-    private final WebClient client = WebClient.builder()
+    private final WebClient webClient = WebClient.builder()
             .baseUrl("https://query1.finance.yahoo.com")
-            .defaultHeader("User-Agent", "Mozilla/5.0")
             .build();
 
     public Mono<MarketPrice> fetchLivePrice(String symbol) {
-
         String url = "/v8/finance/chart/" + symbol + "?interval=1m&range=1d";
 
-        return client.get()
+        return webClient.get()
                 .uri(url)
                 .retrieve()
-                .bodyToMono(String.class)
-                .map(response -> YahooParser.parsePrice(response, symbol));
+                .bodyToMono(YahooMarketPriceResponse.class)
+                .map(response -> {
+                    Double price = response.getChart()
+                            .getResult()
+                            .get(0)
+                            .getMeta()
+                            .getRegularMarketPrice();
+                    long timestamp = System.currentTimeMillis();
+                    return MarketPrice.builder()
+                            .symbol(symbol)
+                            .price(price)
+                            .timestamp(timestamp)
+                            .build();
+                });
     }
 }

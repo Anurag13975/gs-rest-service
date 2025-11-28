@@ -1,4 +1,3 @@
 package com.ml;
 
-public class MLPrediction {
-}
+public record MLPrediction(String trend, double confidence) {}
